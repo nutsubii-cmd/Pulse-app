@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pulse">
+<meta name="theme-color" content="#0a0e17">
+<meta name="description" content="Feel the heartbeat of Georgia. Verified news, secure communication, safety tools.">
+<title>Pulse — პულსი</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=Noto+Sans+Georgian:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+html,body,#root{width:100%;height:100%;background:#0a0e17;font-family:'DM Sans',sans-serif;overflow:hidden}
+body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+::-webkit-scrollbar{width:0}
+input::placeholder{color:#475569}
+input,button{font-family:'DM Sans',sans-serif}
+@keyframes pulseDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.5)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .3s ease}
+.slide-in{animation:slideIn .4s ease both}
+.pulse-dot{display:inline-block;border-radius:50%;background:#e5304e;animation:pulseDot 1.5s ease-in-out infinite}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// ======================== PULSE PWA ========================
+// Complete single-file Progressive Web App
+// No build step required - runs directly in browser
+
+const NEWS = [
+  {id:1,source:"Civil.ge",verified:true,time:"12 min",title:"Parliament votes on contested foreign agents bill amid widespread protests",cat:"Politics",urgent:true},
+  {id:2,source:"OC Media",verified:true,time:"38 min",title:"Tens of thousands gather on Rustaveli Avenue for fifth consecutive night",cat:"Protests",urgent:true},
+  {id:3,source:"Batumelebi",verified:true,time:"1h",title:"Adjara regional officials break ranks, support protestors",cat:"Politics",urgent:false},
+  {id:4,source:"Reuters",verified:true,time:"2h",title:"EU foreign ministers issue joint statement on Georgia's democratic backsliding",cat:"International",urgent:false},
+  {id:5,source:"RFE/RL",verified:true,time:"3h",title:"Georgian universities announce solidarity strike beginning Monday",cat:"Education",urgent:false},
+  {id:6,source:"Citizen",verified:false,time:"45 min",title:"Reports of plainclothes police photographing protestors near Liberty Square",cat:"Safety",urgent:true},
+  {id:7,source:"Tabula",verified:true,time:"4h",title:"Public Defender's office issues urgent statement on detention conditions",cat:"Human Rights",urgent:true},
+  {id:8,source:"JAMnews",verified:true,time:"5h",title:"Diaspora communities organize solidarity rallies in 40+ cities worldwide",cat:"International",urgent:false},
+];
+
+const CHANNELS = [
+  {id:"tbilisi",name:"Tbilisi",members:12840,color:"#e5304e"},
+  {id:"batumi",name:"Batumi",members:4210,color:"#3b82f6"},
+  {id:"legal",name:"Legal Aid",members:890,color:"#4ade80"},
+  {id:"medical",name:"Medical",members:1540,color:"#a78bfa"},
+];
+
+const INIT_MSGS = {
+  tbilisi:[
+    {id:1,user:"Nino T.",time:"2 min",text:"Water cannons near Parliament. Stay safe everyone! \u{1f4aa}",avatar:"N",v:true},
+    {id:2,user:"Giorgi M.",time:"5 min",text:"Medical volunteers needed at Pushkin Square. Bring supplies.",avatar:"G",v:false},
+    {id:3,user:"Lika D.",time:"7 min",text:"Police line at Kostava St. Peaceful chanting continues.",avatar:"L",v:true},
+    {id:4,user:"Dato R.",time:"10 min",text:"EU flags everywhere. Energy is incredible tonight.",avatar:"D",v:false},
+    {id:5,user:"Ana S.",time:"15 min",text:"Metro still running. Avlabari and Liberty Sq stations open.",avatar:"A",v:true},
+  ],
+  batumi:[{id:20,user:"Tamta L.",time:"4 min",text:"Solidarity march from Europe Square at 19:00!",avatar:"T",v:true}],
+  legal:[
+    {id:10,user:"Mariam K.",time:"3 min",text:"Legal observers at Rustaveli. Your rights are being documented.",avatar:"M",v:true},
+    {id:11,user:"Vakhtang P.",time:"8 min",text:"If detained: name ONLY. Request lawyer. Do NOT sign anything.",avatar:"V",v:true},
+  ],
+  medical:[{id:40,user:"Dr. Ketevan",time:"1 min",text:"First aid at Philharmonic steps operational. Need more saline.",avatar:"K",v:true}],
+};
+
+const SAFETY = [
+  {icon:"\u2696\ufe0f",title:"Know Your Rights",desc:"Georgian law protects peaceful assembly under Article 25 of the Constitution. Police must identify themselves and state reasons for any detention. You have the right to legal counsel.",essential:true},
+  {icon:"\ud83d\udcf1",title:"Digital Safety",desc:"Use Signal for sensitive comms. Enable disappearing messages. Disable Face ID/Touch ID at protests \u2014 use PIN only. Turn off location services for social media apps.",essential:true},
+  {icon:"\ud83c\udfe5",title:"Medical Aid Points",desc:"Active first aid stations: Pushkin Square, Vera Park entrance, Philharmonic steps, Freedom Square metro exit. Call the medical hotline for emergencies.",essential:true},
+  {icon:"\ud83d\udd12",title:"If Detained",desc:"State your name only. Request a lawyer immediately. Do not sign anything without legal counsel present. Memorize the legal aid hotline number before attending.",essential:true},
+  {icon:"\ud83d\udcf8",title:"Document Safely",desc:"Film in landscape mode. Capture badge numbers. Upload to secure cloud immediately. Always blur faces of fellow protestors before sharing on social media.",essential:false},
+  {icon:"\ud83c\udf10",title:"Internet Shutdown Plan",desc:"Pre-install Briar app (works via Bluetooth mesh network). Download offline maps of your area. Agree on physical meeting points with your group beforehand.",essential:false},
+  {icon:"\ud83e\uddf4",title:"Tear Gas Response",desc:"Move upwind immediately. Rinse eyes with clean water or saline \u2014 never rub them. Remove contaminated clothing. Blink rapidly. Seek fresh air.",essential:false},
+  {icon:"\ud83d\udc65",title:"Buddy System",desc:"Always attend with at least one trusted partner. Share your live location with someone NOT at the protest. Agree on a check-in schedule and emergency plan.",essential:true},
+];
+
+const CITIES = [
+  {x:56,y:36,label:"Tbilisi",count:"89K",size:28},
+  {x:18,y:54,label:"Batumi",count:"23K",size:18},
+  {x:40,y:28,label:"Kutaisi",count:"15K",size:14},
+  {x:67,y:22,label:"Telavi",count:"8K",size:10},
+  {x:30,y:40,label:"Zugdidi",count:"11K",size:12},
+  {x:48,y:18,label:"Gori",count:"6K",size:9},
+  {x:75,y:44,label:"Rustavi",count:"5K",size:8},
+];
+
+// ======================== APP STATE ========================
+const state = {
+  screen: "onboard",
+  onboardStep: 0,
+  tab: "pulse",
+  count: 147832,
+  beat: 0.7,
+  chatInput: "",
+  channel: "tbilisi",
+  msgs: JSON.parse(JSON.stringify(INIT_MSGS)),
+  newsFilter: "all",
+  openSafety: null,
+  saved: new Set(),
+  settings: false,
+  alerts: true,
+  mesh: false,
+};
+
+// ======================== HEARTBEAT CANVAS ========================
+let heartbeatPhase = 0;
+let heartbeatAnim = null;
+
+function startHeartbeat() {
+  const canvas = document.getElementById("heartbeat-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = canvas.offsetHeight * 2;
+
+  function draw() {
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    heartbeatPhase += 0.025 + state.beat * 0.02;
+    const midY = h / 2, amp = 18 + state.beat * 44;
+    ctx.shadowColor = "#e5304e";
+    ctx.shadowBlur = 10 + state.beat * 12;
+    ctx.strokeStyle = "#e5304e";
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    for (let x = 0; x < w; x++) {
+      const t = (x / w) * Math.PI * 6 + heartbeatPhase;
+      const y = midY - Math.pow(Math.sin(t), 21) * amp - Math.sin(t * 3.7) * (2.5 + state.beat * 5);
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    heartbeatAnim = requestAnimationFrame(draw);
+  }
+  if (heartbeatAnim) cancelAnimationFrame(heartbeatAnim);
+  draw();
+}
+
+// ======================== RENDER ========================
+function h(tag, attrs, ...children) {
+  const el = document.createElement(tag);
+  if (attrs) {
+    Object.entries(attrs).forEach(([k, v]) => {
+      if (k === "style" && typeof v === "object") {
+        Object.assign(el.style, v);
+      } else if (k.startsWith("on")) {
+        el.addEventListener(k.slice(2).toLowerCase(), v);
+      } else if (k === "className") {
+        el.className = v;
+      } else {
+        el.setAttribute(k, v);
+      }
+    });
+  }
+  children.flat(Infinity).forEach(c => {
+    if (c == null || c === false) return;
+    el.appendChild(typeof c === "string" || typeof c === "number" ? document.createTextNode(c) : c);
+  });
+  return el;
+}
+
+const red = "#e5304e";
+const bg = "#0a0e17";
+const light = "#f1f5f9";
+const sub = "#94a3b8";
+const dim = "#64748b";
+const card = "rgba(15,23,42,0.7)";
+const border = "rgba(30,41,59,0.5)";
+const GFont = "'Noto Sans Georgian',sans-serif";
+
+function dot(size=6, color=red) {
+  return h("span", {className:"pulse-dot", style:{width:size+"px",height:size+"px",background:color}});
+}
+
+function renderOnboarding() {
+  const steps = [
+    {t:"Pulse",s:"\u10de\u10e3\u10da\u10e1\u10d8",d:"Feel the heartbeat of your nation. Real-time truth. Secure communication. Together we are stronger.",v:"hb"},
+    {t:"Verified Truth",s:"\u10d3\u10d0\u10db\u10dd\u10ec\u10db\u10d4\u10d1\u10e3\u10da\u10d8",d:"Every news item fact-checked against trusted sources. See what\u2019s verified, pending, or unconfirmed.",v:"check"},
+    {t:"Encrypted & Safe",s:"\u10e3\u10e1\u10d0\u10e4\u10e0\u10d7\u10ee\u10dd",d:"End-to-end encryption. No data collected. No accounts required. Open source and auditable.",v:"lock"},
+  ];
+  const s = steps[state.onboardStep];
+
+  return h("div",{style:{width:"100%",maxWidth:"430px",margin:"0 auto",minHeight:"100vh",background:bg,display:"flex",alignItems:"center",justifyContent:"center"}},
+    h("div",{style:{textAlign:"center",padding:"40px 28px",width:"100%"}},
+      // dots
+      h("div",{style:{display:"flex",gap:"8px",justifyContent:"center",marginBottom:"40px"}},
+        ...steps.map((_,i) => h("div",{style:{width:i===state.onboardStep?"24px":"8px",height:"8px",borderRadius:"4px",background:i===state.onboardStep?red:"rgba(229,48,78,0.2)",transition:"all 0.3s"}}))
+      ),
+      // visual
+      h("div",{style:{height:"120px",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:"24px"}},
+        s.v==="hb" ? h("canvas",{id:"heartbeat-canvas",style:{width:"100%",height:"80px",display:"block"}}) :
+        s.v==="check" ? h("div",{style:{fontSize:"72px",color:"#4ade80"},className:"fade-in"},"\u2713") :
+        h("div",{style:{fontSize:"72px"},className:"fade-in"},"\ud83d\udd12")
+      ),
+      h("h1",{style:{fontSize:"38px",fontWeight:"900",color:light,letterSpacing:"-1px"}},s.t),
+      h("p",{style:{fontSize:"15px",color:red,margin:"4px 0 20px",fontFamily:GFont,letterSpacing:"2px"}},s.s),
+      h("p",{style:{fontSize:"15px",color:sub,lineHeight:"1.65",maxWidth:"300px",margin:"0 auto"}},s.d),
+      // buttons
+      h("div",{style:{marginTop:"40px",display:"flex",gap:"12px",justifyContent:"center",flexWrap:"wrap"}},
+        state.onboardStep > 0 ? h("button",{style:{background:"transparent",border:"1px solid rgba(229,48,78,0.3)",color:red,padding:"14px 28px",borderRadius:"50px",fontSize:"15px",fontWeight:"700",cursor:"pointer"},onClick:()=>{state.onboardStep--;render()}},"Back") : null,
+        state.onboardStep < 2 ?
+          h("button",{style:{background:red,color:"#fff",border:"none",padding:"15px 40px",borderRadius:"50px",fontSize:"15px",fontWeight:"700",cursor:"pointer"},onClick:()=>{state.onboardStep++;render()}},"Next \u2192") :
+          h("button",{style:{background:red,color:"#fff",border:"none",padding:"15px 40px",borderRadius:"50px",fontSize:"15px",fontWeight:"700",cursor:"pointer"},onClick:()=>{state.screen="app";render()}},"Join the Pulse \ud83d\udc93")
+      ),
+      state.onboardStep===0 ? h("button",{style:{background:"none",border:"none",color:"#475569",fontSize:"13px",marginTop:"16px",cursor:"pointer",display:"block",margin:"16px auto 0"},onClick:()=>{state.screen="app";render()}},"Skip") : null,
+      h("p",{style:{fontSize:"11px",color:"#334155",marginTop:"24px"}},"No data collected \u00b7 No accounts \u00b7 Open source")
+    )
+  );
+}
+
+function renderHeader() {
+  return h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 18px 10px",borderBottom:"1px solid rgba(229,48,78,0.08)",background:"rgba(10,14,23,0.95)",zIndex:"10",position:"sticky",top:"0"}},
+    h("div",{style:{display:"flex",alignItems:"center",gap:"8px"}},
+      h("span",{style:{fontSize:"20px",color:red,fontWeight:"900",fontFamily:GFont}},"\u10de"),
+      h("span",{style:{fontSize:"14px",fontWeight:"800",letterSpacing:"1px",color:light}},"PULSE")
+    ),
+    h("div",{style:{display:"flex",alignItems:"center",gap:"10px"}},
+      state.mesh ? h("span",{style:{fontSize:"10px",padding:"3px 8px",borderRadius:"8px",background:"rgba(251,191,36,0.15)",color:"#fbbf24",fontWeight:"700"}},"MESH") : null,
+      dot(6),
+      h("span",{style:{fontSize:"11px",color:red,fontWeight:"700"}},"LIVE"),
+      h("span",{style:{fontSize:"11px",color:"#4ade80"}},"\ud83d\udd12"),
+      h("button",{style:{background:"none",border:"none",color:dim,fontSize:"18px",cursor:"pointer",padding:"4px"},onClick:()=>{state.settings=!state.settings;render()}},"\u2699")
+    )
+  );
+}
+
+function renderSettings() {
+  if (!state.settings) return null;
+  const toggle = (key) => h("button",{style:{width:"48px",height:"28px",borderRadius:"14px",background:state[key]?red:"#1e293b",border:"none",cursor:"pointer",position:"relative",transition:"background 0.2s",flexShrink:"0"},onClick:()=>{state[key]=!state[key];render()}},
+    h("div",{style:{width:"22px",height:"22px",borderRadius:"50%",background:"#fff",position:"absolute",top:"3px",left:state[key]?"23px":"3px",transition:"left 0.2s"}})
+  );
+
+  return h("div",{style:{position:"absolute",top:"52px",right:"12px",left:"12px",background:"#0f172a",borderRadius:"16px",padding:"16px",border:`1px solid ${border}`,zIndex:"20",boxShadow:"0 20px 40px rgba(0,0,0,0.5)"}},
+    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px",paddingBottom:"12px",borderBottom:"1px solid #1e293b"}},
+      h("h3",{style:{color:light,fontSize:"16px",fontWeight:"700"}},"Settings"),
+      h("button",{style:{background:"none",border:"none",color:dim,fontSize:"20px",cursor:"pointer"},onClick:()=>{state.settings=false;render()}},"\u00d7")
+    ),
+    ...[{l:"Push Alerts",d:"Breaking news & safety alerts",k:"alerts"},{l:"Mesh Network",d:"Bluetooth P2P fallback",k:"mesh"}].map(s =>
+      h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0"}},
+        h("div",null,h("div",{style:{color:"#e2e8f0",fontSize:"14px",fontWeight:"600"}},s.l),h("div",{style:{color:dim,fontSize:"12px",marginTop:"2px"}},s.d)),
+        toggle(s.k)
+      )
+    ),
+    h("div",{style:{color:"#475569",fontSize:"11px",textAlign:"center",paddingTop:"12px",borderTop:"1px solid #1e293b",marginTop:"8px"}},"Pulse v1.0 \u00b7 Open Source \u00b7 No Data Collected")
+  );
+}
+
+function renderPulse() {
+  return h("div",{className:"fade-in"},
+    h("h2",{style:{fontSize:"22px",fontWeight:"800",color:light,margin:"0 0 4px"}},"The People\u2019s Heartbeat"),
+    h("p",{style:{fontSize:"13px",color:dim,margin:"0 0 12px"}},"Real-time civic engagement across Georgia"),
+    h("div",{style:{margin:"0 -18px",borderBottom:"1px solid rgba(229,48,78,0.08)"}},
+      h("canvas",{id:"heartbeat-canvas",style:{width:"100%",height:"80px",display:"block"}})
+    ),
+    // stats
+    h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px",margin:"14px 0"}},
+      ...[
+        {n:state.count.toLocaleString(),l:"Active Citizens",c:"\u25b2 12.4%",cl:"#4ade80"},
+        {n:"23",l:"Cities Active",c:"\u25b2 3 new",cl:"#4ade80"},
+        {n:"94%",l:"News Verified",c:"6% pending",cl:"#fbbf24"},
+        {n:"\u221e",l:"Resolve",c:"\ud83c\uddec\ud83c\uddea Georgia",cl:red},
+      ].map(s => h("div",{style:{background:card,border:"1px solid rgba(229,48,78,0.08)",borderRadius:"14px",padding:"14px 12px"}},
+        h("div",{style:{fontSize:"24px",fontWeight:"900",color:light}},s.n),
+        h("div",{style:{fontSize:"11px",color:dim,marginTop:"2px"}},s.l),
+        h("div",{style:{color:s.cl,fontSize:"11px",marginTop:"4px"}},s.c)
+      ))
+    ),
+    // live updates
+    h("div",{style:{display:"flex",alignItems:"center",gap:"6px",fontSize:"11px",color:red,fontWeight:"700",letterSpacing:"1px",marginBottom:"10px",marginTop:"16px"}},dot(6)," LIVE UPDATES"),
+    ...NEWS.slice(0,4).map((n,i) =>
+      h("div",{className:"slide-in",style:{padding:"10px 12px",marginBottom:"8px",background:"rgba(15,23,42,0.6)",borderRadius:"10px",borderLeft:n.urgent?"3px solid #e5304e":"3px solid #1e293b",animationDelay:i*0.08+"s"}},
+        h("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:"3px"}},
+          h("span",{style:{fontSize:"11px",color:dim}},n.source+" \u00b7 "+n.time),
+          n.verified?h("span",{style:{fontSize:"9px",color:"#4ade80"}},"\u2713 Verified"):null
+        ),
+        h("div",{style:{fontSize:"13px",color:"#cbd5e1",lineHeight:"1.4"}},n.title)
+      )
+    ),
+    // inspiration
+    h("div",{style:{marginTop:"20px",padding:"22px",textAlign:"center",background:"linear-gradient(135deg,rgba(229,48,78,0.08),rgba(15,23,42,0.5))",borderRadius:"16px",border:"1px solid rgba(229,48,78,0.12)"}},
+      h("p",{style:{fontSize:"22px",color:light,fontWeight:"700",fontFamily:GFont}},"\u201c\u10d4\u10e0\u10d7\u10dd\u10d1\u10d0 \u10eb\u10d0\u10da\u10d0\u10d0\u201d"),
+      h("p",{style:{fontSize:"13px",color:sub,marginTop:"6px",fontStyle:"italic"}},"Unity is strength")
+    )
+  );
+}
+
+function renderNews() {
+  const cats = ["all",...new Set(NEWS.map(n=>n.cat))];
+  const filtered = NEWS.filter(n=>state.newsFilter==="all"||n.cat===state.newsFilter);
+  return h("div",{className:"fade-in"},
+    h("h2",{style:{fontSize:"22px",fontWeight:"800",color:light,margin:"0 0 4px"}},"Verified News"),
+    h("p",{style:{fontSize:"13px",color:dim,margin:"0 0 16px"}},"Fact-checked from trusted sources"),
+    h("div",{style:{display:"flex",gap:"6px",marginBottom:"16px",overflowX:"auto",paddingBottom:"4px"}},
+      ...cats.map(f=>h("button",{style:{padding:"5px 12px",borderRadius:"20px",fontSize:"11px",border:state.newsFilter===f?`1px solid ${red}`:"1px solid #1e293b",background:state.newsFilter===f?"rgba(229,48,78,0.12)":"transparent",color:state.newsFilter===f?red:sub,cursor:"pointer",whiteSpace:"nowrap",fontWeight:"500"},onClick:()=>{state.newsFilter=f;render()}},f==="all"?"All":f))
+    ),
+    ...filtered.map((n,i)=>
+      h("div",{className:"slide-in",style:{background:card,borderRadius:"14px",padding:"16px",marginBottom:"10px",border:`1px solid ${border}`,animationDelay:i*0.05+"s"}},
+        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}},
+          h("div",{style:{display:"flex",alignItems:"center",gap:"8px"}},
+            h("span",{style:{fontSize:"10px",padding:"2px 8px",borderRadius:"10px",background:n.verified?"rgba(74,222,128,0.15)":"rgba(251,191,36,0.15)",color:n.verified?"#4ade80":"#fbbf24",fontWeight:"700"}},n.verified?"\u2713 Verified":"\u26a0 Unverified"),
+            h("span",{style:{fontSize:"12px",color:sub}},n.source)
+          ),
+          h("span",{style:{fontSize:"11px",color:"#475569"}},n.time)
+        ),
+        h("h3",{style:{fontSize:"15px",fontWeight:"600",color:"#e2e8f0",margin:"0 0 10px",lineHeight:"1.4"}},n.title),
+        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+          h("span",{style:{fontSize:"11px",padding:"3px 10px",borderRadius:"8px",fontWeight:"600",background:n.urgent?"rgba(229,48,78,0.12)":"rgba(100,116,139,0.12)",color:n.urgent?red:sub}},n.cat),
+          h("div",{style:{display:"flex",gap:"12px",alignItems:"center"}},
+            h("button",{style:{background:"none",border:"none",cursor:"pointer",color:state.saved.has(n.id)?red:"#475569",fontSize:"16px"},onClick:(e)=>{e.stopPropagation();state.saved.has(n.id)?state.saved.delete(n.id):state.saved.add(n.id);render()}},state.saved.has(n.id)?"\u2665":"\u2661"),
+            h("span",{style:{fontSize:"12px",color:dim,cursor:"pointer"}},"Share \u2192")
+          )
+        )
+      )
+    )
+  );
+}
+
+function renderChat() {
+  const chMsgs = state.msgs[state.channel] || [];
+  return h("div",{className:"fade-in",style:{display:"flex",flexDirection:"column",height:"calc(100vh - 140px)"}},
+    h("h2",{style:{fontSize:"22px",fontWeight:"800",color:light,margin:"0 0 8px"}},"Secure Channels"),
+    h("div",{style:{display:"flex",gap:"6px",marginBottom:"12px",overflowX:"auto",paddingBottom:"4px",flexShrink:"0"}},
+      ...CHANNELS.map(ch=>h("button",{style:{padding:"6px 12px",borderRadius:"16px",fontSize:"11px",background:state.channel===ch.id?ch.color+"20":"transparent",border:`1px solid ${state.channel===ch.id?ch.color+"50":"#1e293b"}`,color:state.channel===ch.id?ch.color:dim,cursor:"pointer",whiteSpace:"nowrap",fontWeight:"600"},onClick:()=>{state.channel=ch.id;render()}},
+        ch.name+" ",h("span",{style:{fontSize:"9px",opacity:"0.7"}},(ch.members/1000).toFixed(1)+"K")
+      ))
+    ),
+    h("div",{id:"chat-area",style:{flex:"1",overflowY:"auto",display:"flex",flexDirection:"column",gap:"8px",paddingBottom:"8px"}},
+      ...chMsgs.map((m,i)=>{
+        const isMe = m.user==="You";
+        return h("div",{className:"slide-in",style:{display:"flex",gap:"10px",flexDirection:isMe?"row-reverse":"row",animationDelay:i*0.04+"s"}},
+          h("div",{style:{width:"34px",height:"34px",borderRadius:"50%",background:isMe?"rgba(229,48,78,0.2)":"rgba(30,41,59,0.8)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",color:isMe?red:sub,fontWeight:"700",flexShrink:"0"}},m.avatar),
+          h("div",{style:{background:isMe?"rgba(229,48,78,0.1)":card,borderRadius:isMe?"14px 4px 14px 14px":"4px 14px 14px 14px",padding:"10px 14px",maxWidth:"78%",border:`1px solid ${isMe?"rgba(229,48,78,0.2)":border}`}},
+            h("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:"4px",gap:"12px"}},
+              h("span",{style:{fontSize:"12px",fontWeight:"700",color:isMe?red:sub}},m.user,m.v?" ":null,m.v?h("span",{style:{color:"#4ade80",fontSize:"10px"}},"\u2713"):null),
+              h("span",{style:{fontSize:"10px",color:"#475569"}},m.time)
+            ),
+            h("p",{style:{fontSize:"13px",color:"#cbd5e1",margin:"0",lineHeight:"1.45"}},m.text)
+          )
+        );
+      })
+    ),
+    h("div",{style:{display:"flex",gap:"8px",paddingTop:"10px",borderTop:"1px solid rgba(30,41,59,0.4)",flexShrink:"0"}},
+      h("input",{id:"chat-input",style:{flex:"1",background:"rgba(15,23,42,0.8)",border:`1px solid ${border}`,borderRadius:"24px",padding:"10px 16px",color:light,fontSize:"14px",outline:"none"},placeholder:"Encrypted message...",value:state.chatInput,onInput:(e)=>{state.chatInput=e.target.value},onKeydown:(e)=>{if(e.key==="Enter")sendMsg()}}),
+      h("button",{style:{width:"42px",height:"42px",borderRadius:"50%",background:state.chatInput.trim()?red:"#1e293b",border:"none",color:"#fff",fontSize:"18px",fontWeight:"700",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.2s",flexShrink:"0"},onClick:sendMsg},"\u2191")
+    )
+  );
+}
+
+function sendMsg() {
+  if (!state.chatInput.trim()) return;
+  if (!state.msgs[state.channel]) state.msgs[state.channel] = [];
+  state.msgs[state.channel].unshift({id:Date.now(),user:"You",time:"now",text:state.chatInput,avatar:"Y",v:false});
+  state.chatInput = "";
+  render();
+  const input = document.getElementById("chat-input");
+  if (input) input.value = "";
+}
+
+function renderSafety() {
+  return h("div",{className:"fade-in"},
+    h("h2",{style:{fontSize:"22px",fontWeight:"800",color:light,margin:"0 0 4px"}},"Safety Toolkit"),
+    h("p",{style:{fontSize:"13px",color:dim,margin:"0 0 16px"}},"Protect yourself. Protect each other."),
+    // SOS
+    h("div",{style:{padding:"18px",borderRadius:"16px",marginBottom:"16px",background:"linear-gradient(135deg,rgba(229,48,78,0.18),rgba(229,48,78,0.06))",border:"1px solid rgba(229,48,78,0.3)",textAlign:"center"}},
+      h("div",{style:{fontSize:"20px",marginBottom:"6px",color:light}},"\ud83d\udea8 Emergency SOS"),
+      h("p",{style:{fontSize:"13px",color:"#cbd5e1",lineHeight:"1.5"}},"Hold power button 5\u00d7 rapidly to alert trusted contacts with GPS location + auto-record audio"),
+      h("button",{style:{marginTop:"12px",padding:"10px 24px",borderRadius:"24px",background:red,border:"none",color:"#fff",fontSize:"13px",fontWeight:"700",cursor:"pointer"}},"Configure Contacts")
+    ),
+    ...SAFETY.map((s,i)=>
+      h("div",{className:"slide-in",style:{background:card,borderRadius:"14px",padding:"14px 16px",marginBottom:"8px",border:s.essential?"1px solid rgba(229,48,78,0.15)":`1px solid ${border}`,cursor:"pointer",animationDelay:i*0.05+"s"},onClick:()=>{state.openSafety=state.openSafety===i?null:i;render()}},
+        h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between"}},
+          h("div",{style:{display:"flex",alignItems:"center",gap:"10px"}},
+            h("span",{style:{fontSize:"22px"}},s.icon),
+            h("div",null,
+              h("h3",{style:{fontSize:"14px",fontWeight:"700",color:light,margin:"0"}},s.title),
+              s.essential?h("span",{style:{fontSize:"9px",color:red,fontWeight:"700"}},"ESSENTIAL"):null
+            )
+          ),
+          h("span",{style:{color:"#475569",fontSize:"16px",transform:state.openSafety===i?"rotate(180deg)":"none",transition:"transform 0.2s",display:"inline-block"}},"\u2304")
+        ),
+        state.openSafety===i?h("p",{className:"fade-in",style:{fontSize:"13px",color:sub,margin:"10px 0 0",lineHeight:"1.6",paddingLeft:"32px"}},s.desc):null
+      )
+    )
+  );
+}
+
+function renderMap() {
+  return h("div",{className:"fade-in"},
+    h("h2",{style:{fontSize:"22px",fontWeight:"800",color:light,margin:"0 0 4px"}},"Live Map"),
+    h("p",{style:{fontSize:"13px",color:dim,margin:"0 0 16px"}},"Real-time activity across Georgia"),
+    h("div",{style:{borderRadius:"16px",overflow:"hidden",border:`1px solid ${border}`,marginBottom:"16px"}},
+      h("div",{style:{width:"100%",height:"300px",position:"relative",background:"radial-gradient(ellipse at 56% 36%,rgba(229,48,78,0.1) 0%,transparent 45%),radial-gradient(ellipse at center,#0f172a 0%,#0a0e17 100%)"}},
+        h("div",{style:{position:"absolute",left:"10%",top:"10%",width:"80%",height:"80%",border:"1px solid rgba(229,48,78,0.06)",borderRadius:"40% 50% 45% 35%"}}),
+        ...CITIES.map((c,i)=>
+          h("div",{style:{position:"absolute",left:c.x+"%",top:c.y+"%",transform:"translate(-50%,-50%)",textAlign:"center"}},
+            h("div",{style:{width:c.size+"px",height:c.size+"px",borderRadius:"50%",background:"radial-gradient(circle,#e5304e 0%,rgba(229,48,78,0.15) 70%)",animation:`pulseDot 2s ease-in-out ${i*0.3}s infinite`,margin:"0 auto 3px"}}),
+            h("div",{style:{fontSize:c.size>14?"11px":"9px",color:red,fontWeight:"800"}},c.count),
+            h("div",{style:{fontSize:c.size>14?"10px":"8px",color:sub}},c.label)
+          )
+        ),
+        // legend
+        h("div",{style:{position:"absolute",bottom:"10px",left:"10px",fontSize:"10px",color:dim,background:"rgba(10,14,23,0.85)",padding:"8px 12px",borderRadius:"8px",display:"flex",flexDirection:"column",gap:"5px"}},
+          ...[["#e5304e","Gatherings"],["#4ade80","Medical"],["#fbbf24","Legal"]].map(([c,l])=>
+            h("div",{style:{display:"flex",alignItems:"center",gap:"6px"}},dot(5,c)," "+l)
+          )
+        )
+      )
+    ),
+    // stats
+    h("div",{style:{display:"flex",justifyContent:"space-around",padding:"16px",background:"rgba(15,23,42,0.5)",borderRadius:"14px",border:`1px solid ${border}`,textAlign:"center"}},
+      ...[{n:"152K",l:"Total Active",c:red},{n:"18",l:"Med Stations",c:"#4ade80"},{n:"42",l:"Legal Teams",c:"#fbbf24"}].map(s=>
+        h("div",null,h("div",{style:{fontSize:"20px",fontWeight:"800",color:s.c}},s.n),h("div",{style:{fontSize:"10px",color:dim,marginTop:"2px"}},s.l))
+      )
+    ),
+    // alerts
+    h("div",{style:{marginTop:"16px"}},
+      h("div",{style:{fontSize:"12px",color:dim,fontWeight:"600",marginBottom:"8px"}},"RECENT ALERTS"),
+      ...[{t:"3 min",text:"New gathering at Vera Park (~2,000 people)",type:"info"},{t:"8 min",text:"Road closure: Kostava Street",type:"warn"},{t:"15 min",text:"Medical team deployed to Freedom Square",type:"med"}].map(a=>
+        h("div",{style:{padding:"10px 12px",marginBottom:"6px",borderRadius:"10px",background:"rgba(15,23,42,0.6)",borderLeft:`3px solid ${a.type==="warn"?"#fbbf24":a.type==="med"?"#4ade80":"#3b82f6"}`}},
+          h("div",{style:{fontSize:"10px",color:"#475569",marginBottom:"2px"}},a.t+" ago"),
+          h("div",{style:{fontSize:"12px",color:"#cbd5e1",lineHeight:"1.4"}},a.text)
+        )
+      )
+    )
+  );
+}
+
+function renderTabBar() {
+  const tabs = [{id:"pulse",icon:"\ud83d\udc93",l:"Pulse"},{id:"news",icon:"\ud83d\udcf0",l:"News"},{id:"chat",icon:"\ud83d\udcac",l:"Chat"},{id:"safety",icon:"\ud83d\udee1\ufe0f",l:"Safety"},{id:"map",icon:"\ud83d\udccd",l:"Map"}];
+  return h("div",{style:{position:"fixed",bottom:"0",left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:"430px",display:"flex",justifyContent:"space-around",padding:"8px 0 22px",paddingBottom:"max(22px, env(safe-area-inset-bottom))",background:"linear-gradient(to top,#0a0e17 65%,rgba(10,14,23,0.95))",borderTop:"1px solid rgba(30,41,59,0.3)",zIndex:"10"}},
+    ...tabs.map(t=>h("button",{style:{display:"flex",flexDirection:"column",alignItems:"center",background:"none",border:"none",cursor:"pointer",padding:"4px 12px",transform:state.tab===t.id?"translateY(-2px)":"none",transition:"transform 0.15s"},onClick:()=>{state.tab=t.id;render()}},
+      h("span",{style:{fontSize:"20px"}},t.icon),
+      h("span",{style:{fontSize:"10px",marginTop:"2px",color:state.tab===t.id?red:"#475569",fontWeight:state.tab===t.id?"700":"400"}},t.l)
+    ))
+  );
+}
+
+function render() {
+  const root = document.getElementById("root");
+  root.innerHTML = "";
+
+  if (state.screen === "onboard") {
+    root.appendChild(renderOnboarding());
+    setTimeout(startHeartbeat, 50);
+    return;
+  }
+
+  const app = h("div",{style:{width:"100%",maxWidth:"430px",margin:"0 auto",minHeight:"100vh",background:bg,display:"flex",flexDirection:"column",position:"relative"}},
+    renderHeader(),
+    renderSettings(),
+    h("div",{style:{flex:"1",overflowY:"auto",padding:"16px 18px 100px"}},
+      state.tab==="pulse"?renderPulse():
+      state.tab==="news"?renderNews():
+      state.tab==="chat"?renderChat():
+      state.tab==="safety"?renderSafety():
+      renderMap()
+    ),
+    renderTabBar()
+  );
+  root.appendChild(app);
+
+  if (state.tab === "pulse" || state.screen === "onboard") {
+    setTimeout(startHeartbeat, 50);
+  }
+}
+
+// Live counter
+setInterval(() => {
+  state.count += Math.floor(Math.random() * 18) - 5;
+  state.beat = 0.45 + Math.random() * 0.55;
+  const el = document.querySelector("[data-counter]");
+  if (el) el.textContent = state.count.toLocaleString();
+}, 2200);
+
+// Register service worker
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+
+// Initial render
+render();
+</script>
+</body>
+</html>
